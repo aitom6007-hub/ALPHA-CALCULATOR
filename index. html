@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dark Calculator</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #08090c;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.calculator {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px 20px;
+}
+
+.header {
+  color: #ff9f0a;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  margin-bottom: 24px;
+}
+
+.screen {
+  min-height: 145px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 16px 4px 28px;
+  overflow: hidden;
+}
+
+#expression {
+  color: #898b95;
+  font-size: 19px;
+  min-height: 27px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+#display {
+  font-size: clamp(42px, 13vw, 64px);
+  font-weight: 300;
+  overflow-wrap: anywhere;
+  text-align: right;
+  width: 100%;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+button {
+  border: none;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  font-size: 25px;
+  color: white;
+  background: #24262d;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active { filter: brightness(1.5); }
+
+.utility { background: #454750; }
+.operator { background: #ff9f0a; }
+.zero {
+  grid-column: span 2;
+  aspect-ratio: auto;
+  border-radius: 45px;
+  text-align: left;
+  padding-left: 30px;
+}
+
+.footer {
+  text-align: center;
+  color: #676974;
+  font-size: 11px;
+  margin-top: 24px;
+  letter-spacing: 2px;
+}
+</style>
+</head>
+
+<body>
+<main class="calculator">
+  <div class="header">DARK CALCULATOR</div>
+
+  <section class="screen" aria-live="polite">
+    <div id="expression"></div>
+    <div id="display">0</div>
+  </section>
+
+  <section class="keys">
+    <button class="utility" data-action="clear">AC</button>
+    <button class="utility" data-action="sign">±</button>
+    <button class="utility" data-action="percent">%</button>
+    <button class="operator" data-op="/">÷</button>
+
+    <button data-num="7">7</button>
+    <button data-num="8">8</button>
+    <button data-num="9">9</button>
+    <button class="operator" data-op="*">×</button>
+
+    <button data-num="4">4</button>
+    <button data-num="5">5</button>
+    <button data-num="6">6</button>
+    <button class="operator" data-op="-">−</button>
+
+    <button data-num="1">1</button>
+    <button data-num="2">2</button>
+    <button data-num="3">3</button>
+    <button class="operator" data-op="+">+</button>
+
+    <button data-action="delete">⌫</button>
+    <button class="zero" data-num="0">0</button>
+    <button data-action="decimal">.</button>
+    <button class="operator" data-action="equals">=</button>
+  </section>
+
+  <div class="footer">SIMPLE • FAST • PREMIUM</div>
+</main>
+
+<script>
+const display = document.getElementById("display");
+const expression = document.getElementById("expression");
+
+let current = "0";
+let stored = null;
+let operator = null;
+let fresh = true;
+let justSolved = false;
+
+function show() {
+  display.textContent = current;
+}
+
+function format(n) {
+  if (!Number.isFinite(n)) return "Error";
+  if (Object.is(n, -0)) n = 0;
+  return Number(n.toPrecision(10)).toString();
+}
+
+function reset() {
+  current = "0";
+  stored = null;
+  operator = null;
+  fresh = true;
+  justSolved = false;
+  expression.textContent = "";
+  show();
+}
+
+function calculate(a, b, op) {
+  if (op === "+") return a + b;
+  if (op === "-") return a - b;
+  if (op === "*") return a * b;
+  if (op === "/") return b === 0 ? NaN : a / b;
+  return b;
+}
+
+function number(n) {
+  if (current === "Error") reset();
+
+  if (fresh || justSolved) {
+    current = n;
+    fresh = false;
+    justSolved = false;
+    if (stored === null) expression.textContent = "";
+  } else if (current.replace("-", "").length < 15) {
+    current = current === "0" ? n : current + n;
+  }
+  show();
+}
+
+function chooseOperator(op) {
+  if (current === "Error") return;
+
+  const value = Number(current);
+
+  if (operator && stored !== null && !fresh) {
+    current = format(calculate(stored, value, operator));
+    show();
+    if (current === "Error") {
+      stored = null;
+      operator = null;
+      fresh = true;
+      return;
+    }
+  }
+
+  stored = Number(current);
+  operator = op;
+  expression.textContent = format(stored) + " " + op;
+  fresh = true;
+  justSolved = false;
+}
+
+function equals() {
+  if (operator === null || stored === null || fresh) return;
+
+  const a = stored;
+  const b = Number(current);
+  const op = operator;
+  const result = calculate(a, b, op);
+
+  expression.textContent =
+    format(a) + " " + op + " " + format(b) + " =";
+
+  current = format(result);
+  stored = null;
+  operator = null;
+  fresh = true;
+  justSolved = true;
+  show();
+}
+
+function act(action) {
+  if (action === "clear") {
+    reset();
+  } else if (action === "delete") {
+    if (current === "Error" || fresh || justSolved) {
+      current = "0";
+      fresh = false;
+      justSolved = false;
+    } else {
+      current = current.length > 1
+        ? current.slice(0, -1)
+        : "0";
+      if (current === "-") current = "0";
+    }
+    show();
+  } else if (action === "decimal") {
+    if (current === "Error") reset();
+    if (fresh || justSolved) {
+      current = "0.";
+      fresh = false;
+      justSolved = false;
+    } else if (!current.includes(".")) {
+      current += ".";
+    }
+    show();
+  } else if (action === "sign") {
+    if (current !== "0" && current !== "Error") {
+      current = current.startsWith("-")
+        ? current.slice(1)
+        : "-" + current;
+      show();
+    }
+  } else if (action === "percent") {
+    if (current !== "Error") {
+      current = format(Number(current) / 100);
+      show();
+    }
+  } else if (action === "equals") {
+    equals();
+  }
+}
+
+document.querySelector(".keys").addEventListener("click", event => {
+  const button = event.target.closest("button");
+  if (!button) return;
+
+  if (button.dataset.num !== undefined) {
+    number(button.dataset.num);
+  } else if (button.dataset.op) {
+    chooseOperator(button.dataset.op);
+  } else if (button.dataset.action) {
+    act(button.dataset.action);
+  }
+});
+
+document.addEventListener("keydown", event => {
+  if (/^[0-9]$/.test(event.key)) number(event.key);
+  else if (event.key === ".") act("decimal");
+  else if (event.key === "Enter" || event.key === "=") equals();
+  else if (event.key === "Escape") reset();
+  else if (event.key === "Backspace") act("delete");
+  else if (["+", "-", "*", "/"].includes(event.key))
+    chooseOperator(event.key);
+});
+</script>
+</body>
+</html>

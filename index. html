@@ -100,6 +100,9 @@ button:active { filter: brightness(1.5); }
 </style>
 </head>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111111">
+
 <body>
 <main class="calculator">
   <div class="header">DARK CALCULATOR</div>
